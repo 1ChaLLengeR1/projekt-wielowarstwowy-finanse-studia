@@ -1,0 +1,18 @@
+services:
+  project_finance:
+    build:
+      context: .
+      dockerfile: dockerfiles/local.dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - env/local.env
+    volumes:
+      - .:/app
+    networks:
+      - project_finance
+
+
+networks:
+  project_finance:
+    driver: bridge
