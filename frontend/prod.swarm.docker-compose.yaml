@@ -1,0 +1,24 @@
+services:
+  app_frontend_project_job:
+    image: arturscibor/praca.strona.arturscibor.pl:latest
+    env_file:
+      - .env
+    networks:
+      - traefik-public
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.frontend.rule=Host(`praca.strona.arturscibor.pl`)"
+        - "traefik.http.routers.frontend.entrypoints=websecure"
+        - "traefik.http.routers.frontend.tls.certresolver=myresolver"
+        - "traefik.http.services.frontend.loadbalancer.server.port=80"
+        # Opcjonalnie: retry dla frontendu (jeśli chcesz, np. przy błędach połączenia z backendem)
+        - "traefik.http.middlewares.frontend-retry.retry.attempts=2"
+        - "traefik.http.routers.frontend.middlewares=frontend-retry"
+
+networks:
+  traefik-public:
+    external: true

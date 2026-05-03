@@ -1,0 +1,18 @@
+services:
+  app_frontend_project_job:
+    build:
+      context: .
+      dockerfile: dockerfiles/prod.dockerfile
+    ports:
+      - "2000:80"
+    restart: always
+    stdin_open: true
+    tty: true
+    env_file:
+      - .env
+    networks:
+      - project_job
+
+networks:
+  project_job:
+    driver: bridge

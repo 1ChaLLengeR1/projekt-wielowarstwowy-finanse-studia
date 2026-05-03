@@ -1,0 +1,56 @@
+name: Deploy
+on:
+  workflow_call:
+    secrets:
+      SSH_PRIVATE_KEY:
+        required: true
+      SUDO_PASSWORD:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add SSH host to known_hosts...
+        run: |
+          ssh-keyscan -H arturscibor.pl >> ~/.ssh/known_hosts
+          ssh-keyscan -H 146.59.93.12 >> ~/.ssh/known_hosts
+
+      - name: Debug SSH Connection
+        run: ssh -T artur@arturscibor.pl || true
+
+      - name: Pull latest changes from Git
+        run: |
+          ssh artur@arturscibor.pl '
+            echo "${{ secrets.SUDO_PASSWORD }}" | sudo -S rm -rf /var/www/pracaArturScibor/praca.strona.arturscibor.pl &&
+            mkdir -p /var/www/pracaArturScibor/praca.strona.arturscibor.pl &&
+            chmod 755 /var/www/pracaArturScibor/praca.strona.arturscibor.pl &&
+            cd /var/www/pracaArturScibor/praca.strona.arturscibor.pl &&
+            git clone --branch main git@github.com:1ChaLLengeR1/project-job-website-vue.js.git . &&
+            cp -r /var/www/envs/projectJob/frontend/env/.env /var/www/pracaArturScibor/praca.strona.arturscibor.pl
+          '
+
+      - name: Push image to DockerHub
+        run: |
+          ssh artur@arturscibor.pl '
+          cd /var/www/pracaArturScibor/praca.strona.arturscibor.pl/scripts &&
+          chmod +x ./upload_compose.sh && 
+          ./upload_compose.sh $(date +%Y%m%d%H%M)
+          '
+
+      - name: Run deploy script on server
+        run: |
+          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=20 artur@arturscibor.pl '
+            cd /var/www/pracaArturScibor/praca.strona.arturscibor.pl/scripts &&
+            chmod +x ./swarm_deploy.sh &&
+            echo "${{ secrets.SUDO_PASSWORD }}" | sudo -S timeout 900 ./swarm_deploy.sh $(date +%Y%m%d%H%M)
+          '

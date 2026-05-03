@@ -1,0 +1,19 @@
+services:
+  app_frontend_project_job:
+    build:
+      context: .
+      dockerfile: dockerfiles/local.dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    env_file:
+      - .env
+    networks:
+      - project_job
+
+
+networks:
+  project_job:
+    driver: bridge

@@ -1,0 +1,35 @@
+name: Cypress-Test
+on: workflow_call
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get code
+        uses: actions/checkout@v4
+
+      # - name: Cache depdendencies
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: node_modules
+      #     key: deps-node-modules-${{ hashFiles('**/yarn.lock') }}
+
+      - name: Install node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Build
+        run: yarn build
+
+      - name: Start server
+        run: yarn preview &
+
+      - name: Waiting for server
+        run: npx wait-on http://localhost:5173 --timeout 120000
+
+      - name: Run test
+        timeout-minutes: 1
+        run: yarn test:cypress
