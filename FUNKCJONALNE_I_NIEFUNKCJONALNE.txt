@@ -1,0 +1,266 @@
+﻿================================================================
+     WYMAGANIA FUNKCJONALNE I NIEFUNKCJONALNE
+     Projekt: System Zarządzania Finansami i Zadaniami
+================================================================
+
+
+----------------------------------------------------------------
+ 1. WYMAGANIA FUNKCJONALNE
+----------------------------------------------------------------
+
+Wymagania funkcjonalne opisują konkretne operacje, które system
+musi umożliwiać użytkownikowi.
+
+
+  1.1 MODUŁ AUTORYZACJI
+  ---------------------
+  WF-01  System umożliwia logowanie użytkownika na podstawie
+         nazwy użytkownika (username) i hasła (password).
+         Endpoint: POST /authentication/login
+         Odpowiedź: access token (JWT), refresh token, id, username.
+
+  WF-02  System umożliwia automatyczne odświeżenie sesji
+         przy użyciu refresh tokenu bez ponownego logowania.
+         Endpoint: GET /authentication/automatically_login/{user_id}
+
+  WF-03  Hasła użytkowników przechowywane są w bazie danych
+         wyłącznie w postaci zahaszowanej (bcrypt).
+
+  WF-04  Każde żądanie do chronionych zasobów API musi zawierać
+         nagłówek Authorization: Bearer <token>.
+         Żądania bez ważnego tokenu są odrzucane (HTTP 401/403).
+
+
+  1.2 MODUŁ ZADAŃ (Tasks)
+  -----------------------
+  WF-05  Użytkownik może utworzyć nowe zadanie podając opis
+         (description) i czas trwania w minutach (time).
+         Endpoint: POST /tasks/create
+
+  WF-06  Użytkownik może pobrać listę zadań z filtrowaniem
+         według statusu: aktywne (active=true) lub
+         zakończone (active=false).
+         Endpoint: GET /tasks/collection?active=true|false
+
+  WF-07  Użytkownik może edytować opis i czas trwania zadania.
+         Endpoint: PATCH /tasks/update/{task_id}
+
+  WF-08  Użytkownik może zmienić status zadania (aktywne /
+         zakończone) bez edycji pozostałych danych.
+         Endpoint: PATCH /tasks/update/active/{task_id}
+
+  WF-09  Użytkownik może usunąć zadanie po podaniu jego
+         identyfikatora (UUID).
+         Endpoint: DELETE /tasks/delete/{task_id}
+
+  WF-10  System udostępnia statystyki zadań w zadanym
+         przedziale dat: łączna liczba zadań, łączny czas,
+         średnia liczba zadań na tydzień, średni czas na tydzień,
+         liczba zadań per dzień.
+         Endpoint: GET /tasks/statistics?start_date=...&end_date=...
+
+
+  1.3 MODUŁ ROZLICZEŃ PIENIĘŻNYCH (Outstanding Money)
+  ----------------------------------------------------
+  WF-11  Użytkownik może pobrać listę wszystkich list zaległości
+         wraz z przypisanymi do nich pozycjami.
+         Endpoint: GET /outstanding_money/collection
+
+  WF-12  Użytkownik może utworzyć nową listę zaległości
+         (np. dla konkretnej osoby lub kategorii).
+         Endpoint: POST /outstanding_money/create_list
+
+  WF-13  Użytkownik może dodać pozycję (kwota, nazwa, data)
+         do istniejącej listy zaległości.
+         Endpoint: POST /outstanding_money/add_item
+
+  WF-14  Użytkownik może zmienić nazwę istniejącej listy.
+         Endpoint: PUT /outstanding_money/edit_name_list
+
+  WF-15  Użytkownik może edytować pozycję na liście zaległości
+         (kwota, nazwa, data).
+         Endpoint: PUT /outstanding_money/edit_item
+
+  WF-16  Użytkownik może usunąć całą listę zaległości.
+         Endpoint: DELETE /outstanding_money/delete_list/{id}
+
+  WF-17  Użytkownik może usunąć pojedynczą pozycję z listy.
+         Endpoint: DELETE /outstanding_money/delete_item/{id}
+
+
+  1.4 MODUŁ KALKULATORA PALIWA (Fuel Calculator)
+  -----------------------------------------------
+  WF-18  System oblicza koszt paliwa na podstawie podanych
+         przez użytkownika parametrów (trasa, spalanie, cena paliwa).
+         Endpoint: POST /fuel/fuel_calculations
+         Wynik prezentowany jest w interfejsie frontendowym.
+
+
+  1.5 MODUŁ LOGÓW (Logs)
+  -----------------------
+  WF-19  Użytkownik może pobrać N ostatnich wpisów logów
+         z systemu.
+         Endpoint: GET /logs/collection/{number}
+
+  WF-20  System (lub użytkownik) może dodać nowy wpis logu
+         z opisem zdarzenia.
+         Endpoint: POST /logs/create/{description}
+
+
+  1.6 INTERFEJS UŻYTKOWNIKA (Frontend)
+  -------------------------------------
+  WF-21  Aplikacja frontendowa udostępnia 5 widoków dostępnych
+         po zalogowaniu:
+           - /login            -> panel logowania
+           - /money-settlement -> rozliczenia pieniężne
+           - /fuel-calculator  -> kalkulator paliwa
+           - /logs             -> przeglądanie logów
+           - /tasks            -> zarządzanie zadaniami
+
+  WF-22  Trasy wymagające zalogowania są chronione przez Vue Router
+         (meta: isAuth). Niezalogowany użytkownik jest przekierowywany
+         na stronę logowania.
+
+  WF-23  Interfejs jest dostępny w języku polskim (pl.json).
+         Tłumaczenia obsługiwane przez vue-i18n.
+
+
+----------------------------------------------------------------
+ 2. WYMAGANIA NIEFUNKCJONALNE
+----------------------------------------------------------------
+
+Wymagania niefunkcjonalne opisują ograniczenia i właściwości
+jakościowe systemu, niezwiązane bezpośrednio z konkretnymi
+funkcjami.
+
+
+  2.1 BEZPIECZEŃSTWO
+  ------------------
+  WNF-01  Uwierzytelnianie oparte na JWT (JSON Web Token).
+          Tokeny podpisywane algorytmem HS256.
+          Access token wygasa po czasie określonym w konfiguracji
+          (TOKEN_EXPIRES_HOURS). Refresh token ma dłuższy czas życia
+          (REFRESH_TOKEN_EXPIRES_HOURS).
+
+  WNF-02  Hasła użytkowników nigdy nie są przechowywane
+          ani przesyłane w postaci jawnej. Stosowane jest
+          haszowanie bcrypt (passlib + bcrypt).
+
+  WNF-03  Klucze sekretne JWT (SECRET_KEY_TOKEN,
+          SECRET_KEY_REFRESH_TOKEN) konfigurowane są poprzez
+          zmienne środowiskowe (.env), nie są wkompilowane
+          w kod źródłowy.
+
+  WNF-04  CORS skonfigurowany restrykcyjnie: dozwolone origins
+          to wyłącznie localhost:5173 i 127.0.0.1:5173.
+          Dozwolone metody: POST, GET, PUT, PATCH, DELETE, OPTIONS.
+          Dozwolone nagłówki: Authorization, Content-Type, Accept,
+          x-refresh-token, UserData.
+
+
+  2.2 WYDAJNOŚĆ
+  -------------
+  WNF-05  Backend uruchamiany na serwerze Uvicorn (ASGI),
+          co umożliwia obsługę żądań asynchronicznych i wysoką
+          przepustowość przy małym zużyciu zasobów.
+
+  WNF-06  Połączenia z bazą PostgreSQL zarządzane przez
+          SQLAlchemy z connection pooling, co ogranicza
+          narzut na nawiązywanie nowych połączeń.
+
+  WNF-07  Frontend budowany przy użyciu Vite, co zapewnia
+          szybkie ładowanie aplikacji dzięki tree-shakingowi
+          i code-splittingowi.
+
+
+  2.3 PRZENOŚNOŚĆ I URUCHOMIENIE
+  --------------------------------
+  WNF-08  Cały projekt uruchamiany jedną komendą przez
+          Docker Compose (docker-compose.yaml w katalogu głównym).
+          Backend dostępny na porcie 3000, frontend na porcie 5173.
+
+  WNF-09  Backend i frontend posiadają osobne Dockerfile
+          dla środowiska lokalnego (dockerfiles/local.dockerfile),
+          co umożliwia izolację zależności i powtarzalne środowisko.
+
+  WNF-10  Konfiguracja środowiska (dane bazy, klucze JWT, porty)
+          przechowywana w plikach .env wczytywanych przez
+          python-dotenv, co umożliwia zmianę środowiska
+          bez modyfikacji kodu.
+
+
+  2.4 TESTOWALNOŚĆ
+  -----------------
+  WNF-11  Backend posiada zestaw testów jednostkowych (pytest)
+          obejmujących warstwę helperów (test_headers, test_validators),
+          middleware (test_utils, test_basic_authorization) oraz
+          repozytorium zadań (test_create, test_collection,
+          test_update, test_delete, test_statistics).
+          Łącznie ~68 testów, wszystkie przechodzą.
+
+  WNF-12  Testy repozytorium izolowane są od produkcyjnej bazy danych
+          przez mockowanie get_db (monkeypatch) oraz użycie
+          dedykowanej bazy testowej lub transakcji z rollbackiem.
+
+  WNF-13  Frontend posiada test E2E (Cypress) weryfikujący
+          poprawne renderowanie formularza logowania
+          (LoginPanel.cy.ts).
+
+
+  2.5 UTRZYMYWALNOŚĆ I ARCHITEKTURA
+  -----------------------------------
+  WNF-14  Backend zbudowany zgodnie z architekturą warstwową:
+            api (routing) -> handler (logika) -> repository (dane)
+            -> database (ORM/PostgreSQL)
+          Każda warstwa ma jedną odpowiedzialność, co ułatwia
+          testowanie i modyfikację.
+
+  WNF-15  Frontend stosuje wzorzec Pinia Store (stores/) do
+          centralnego zarządzania stanem aplikacji, oddzielając
+          logikę pobierania danych od warstwy widoku.
+
+  WNF-16  Projekt dokumentowany przez interaktywny interfejs
+          Swagger UI dostępny pod adresem /docs (generowany
+          automatycznie przez FastAPI na podstawie typów Pydantic).
+
+
+  2.6 INTERFEJS I DOSTĘPNOŚĆ
+  ---------------------------
+  WNF-17  Interfejs użytkownika jest responsywny dzięki
+          Tailwind CSS i dostosowuje się do różnych rozdzielczości
+          ekranu (desktop i tablet).
+
+  WNF-18  Komponenty UI oparte na bibliotece PrimeVue 4.x,
+          zapewniającej spójny wygląd i dostępność (ARIA)
+          elementów interaktywnych.
+
+  WNF-19  Aplikacja frontendowa to Single Page Application (SPA),
+          co eliminuje przeładowania strony i zapewnia płynną
+          nawigację między widokami.
+
+
+----------------------------------------------------------------
+ 3. STOS TECHNOLOGICZNY (podsumowanie)
+----------------------------------------------------------------
+
+  Backend:
+    Python 3.13 + FastAPI 0.111.1
+    SQLAlchemy 1.4.39 + psycopg2-binary 2.9.10
+    PostgreSQL (baza danych)
+    PyJWT 2.4.0, passlib 1.7.4, bcrypt 4.2.1
+    Uvicorn 0.30.3 (serwer ASGI)
+    pytest 8.3.5 (testy jednostkowe)
+
+  Frontend:
+    Vue 3.3.4 + TypeScript 5.2.2
+    Vue Router 4.2.4, Pinia 2.3.1
+    PrimeVue 4.3.6, Tailwind CSS 3.3.3
+    Chart.js 4.5.0 (wykresy)
+    Vite 4.4.9 (build), Cypress 14.0.3 (testy E2E)
+
+  Infrastruktura:
+    Docker + Docker Compose
+    Makefile (compose_build, compose_up, compose_down)
+
+
+================================================================

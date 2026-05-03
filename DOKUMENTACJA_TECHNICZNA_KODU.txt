@@ -1,0 +1,560 @@
+﻿================================================================
+     DOKUMENTACJA TECHNICZNA KODU
+     Projekt: System Zarządzania Finansami i Zadaniami
+================================================================
+
+
+----------------------------------------------------------------
+ 1. ARCHITEKTURA OGÓLNA
+----------------------------------------------------------------
+
+Projekt zbudowany jest jako aplikacja trójwarstwowa rozdzielona
+na dwa niezależne repozytoria/serwisy:
+
+  [Frontend]  Vue 3 SPA  →  HTTP/REST  →  [Backend]  FastAPI  →  [PostgreSQL]
+
+  Komunikacja: REST API (JSON), autoryzacja JWT (Bearer token).
+  Frontend i backend działają jako osobne kontenery Docker.
+  W środowisku produkcyjnym ruchem zarządza reverse proxy Traefik
+  (HTTPS, load balancing, health check).
+
+
+  Struktura katalogów projektu (root):
+  ├── backend/                   serwer FastAPI (Python)
+  ├── frontend/                  aplikacja Vue 3 (TypeScript)
+  ├── docker-compose.yaml        uruchomienie lokalne (oba serwisy)
+  └── makefile                   skróty do docker compose
+
+
+----------------------------------------------------------------
+ 2. BACKEND — FastAPI (Python)
+----------------------------------------------------------------
+
+  2.1 STRUKTURA KATALOGÓW
+  ------------------------
+  backend/
+  ├── main.py                    punkt wejścia aplikacji
+  ├── requirements.txt           zależności Pythona
+  ├── pytest.ini                 konfiguracja testów
+  ├── makefile                   skróty deweloperskie
+  ├── api/                       warstwa routingu HTTP
+  │   ├── api.py                 rejestracja wszystkich routerów
+  │   ├── routers.py             stałe ze ścieżkami URL
+  │   ├── auth/                  endpointy logowania
+  │   ├── fuel_calculator/       endpointy kalkulatora
+  │   ├── logs/                  endpointy logów
+  │   ├── outstanding_money/     endpointy rozliczeń
+  │   └── tasks/                 endpointy zadań
+  ├── core/                      logika biznesowa
+  │   ├── handler/               obsługa żądań (łączy api z repo)
+  │   ├── helper/                narzędzia: headers.py, validators.py
+  │   ├── middleware/            JWT: basic_authorization.py, utils.py
+  │   └── repository/psql/       zapytania do bazy danych
+  │       ├── fuel_calculator/
+  │       ├── logs/
+  │       ├── outstanding_money/
+  │       ├── tasks/             create, collection, update, delete, statistics
+  │       └── user/
+  ├── database/                  modele ORM i połączenie z bazą
+  │   ├── db.py                  silnik SQLAlchemy + get_db()
+  │   ├── auth/models.py         model Users
+  │   ├── tasks/models.py        model Tasks
+  │   ├── logs/models.py         model Logs
+  │   ├── outstanding_money/     modele NamesOverdue, OutstandingMoney
+  │   └── sql/                   skrypty migracyjne SQL
+  ├── env/                       pliki konfiguracyjne środowiska
+  ├── dockerfiles/               Dockerfile local i prod
+  ├── scripts/                   skrypty migracyjne i deploy
+  └── tests/                     testy jednostkowe pytest
+
+
+  2.2 PUNKT WEJŚCIA — main.py
+  ----------------------------
+  Plik: backend/main.py
+
+  Tworzy instancję FastAPI, rejestruje router API, konfiguruje
+  middleware CORS i udostępnia endpoint health check.
+
+    app = FastAPI(title="Project Finance", description="...")
+    app.include_router(api_router)
+    app.add_middleware(CORSMiddleware, ...)
+
+    @app.get("/health")
+    async def health(): return {"status": "ok"}
+
+  Endpoint /health wykorzystywany przez Traefik do sprawdzania
+  stanu kontenera w trybie Swarm (healthcheck co 10s).
+
+
+  2.3 ROUTING — api/api.py i api/routers.py
+  ------------------------------------------
+  Plik: backend/api/api.py
+
+  Tworzy główny router APIRouter i dołącza do niego pięć
+  modułowych routerów z odpowiednimi prefiksami i tagami:
+
+    api_router.include_router(login_router,           prefix="/authentication", tags=["Authentication"])
+    api_router.include_router(outstanding_money_router, prefix="/outstanding_money", tags=["Outstanding Money"])
+    api_router.include_router(logs_router,            prefix="/logs",           tags=["Logs"])
+    api_router.include_router(fuel_calculator_router, prefix="/fuel",           tags=["Fuel Calculator"])
+    api_router.include_router(tasks_router,           prefix="/tasks",          tags=["Tasks"])
+
+  Plik: backend/api/routers.py
+  Przechowuje stałe ze ścieżkami URL jako string constants
+  (np. TASKS_CREATE = "/create"), co eliminuje duplikację
+  ścieżek między plikami routerów i handlerami.
+
+
+  2.4 WARSTWA MIDDLEWARE — autoryzacja JWT
+  -----------------------------------------
+  Plik: backend/core/middleware/basic_authorization.py
+  Klasa: JWTBasicAuthenticationMiddleware (rozszerza HTTPBearer)
+
+  Odpowiada za wszystkie operacje związane z tokenami JWT:
+
+    encode_jwt(username, password)
+      - weryfikuje użytkownika w bazie (get_db)
+      - sprawdza hasło bcrypt (verification_password)
+      - generuje access token (HS256, wygasa po TOKEN_EXPIRES_HOURS)
+      - generuje refresh token (HS256, wygasa po REFRESH_TOKEN_EXPIRES_HOURS)
+      - zwraca: (is_valid, message, {access_token, refresh_token, id, username})
+
+    decode_jwt(token)
+      - dekoduje i weryfikuje access token
+      - sprawdza obecność pola "id" w payload
+      - zwraca: (is_valid, message)
+
+    encode_refresh_jwt(user_id)
+      - generuje nowy refresh token dla user_id
+      - zwraca: string token
+
+    decode_refresh_jwt(refresh_token, user_id)
+      - dekoduje refresh token, weryfikuje user_id w bazie
+      - zwraca: (is_valid, message, user_data)
+
+  Plik: backend/core/middleware/utils.py
+  Funkcja: verification_password(plain, hashed)
+    - używa passlib CryptContext (bcrypt) do weryfikacji hasła
+
+  Klucze JWT konfigurowane przez zmienne środowiskowe:
+    SECRET_KEY_TOKEN, SECRET_KEY_REFRESH_TOKEN, ALGORITHM,
+    TOKEN_EXPIRES_HOURS, REFRESH_TOKEN_EXPIRES_HOURS
+
+
+  2.5 WARSTWA HELPER
+  -------------------
+  Plik: backend/core/helper/headers.py
+  Funkcja: check_required_headers(request, required_headers)
+    - weryfikuje obecność wymaganych nagłówków HTTP w żądaniu
+    - nagłówek UserData parsowany jako JSON
+    - nagłówek Authorization tylko weryfikowany (nie trafia do data)
+    - zwraca: {is_valid, status, status_code, data}
+
+  Plik: backend/core/helper/validators.py
+  Funkcje:
+    is_valid_uuid(value, version=4)
+      - sprawdza czy string jest poprawnym UUID v4
+    get_env_variable(name)
+      - pobiera zmienną środowiskową, stripuje cudzysłowy,
+        rzuca wyjątek jeśli brak lub pusta
+    validate_required_fields(data, required)
+      - sprawdza obecność wymaganych kluczy w słowniku
+      - zwraca: (is_valid, message)
+
+
+  2.6 WARSTWA REPOZYTORIUM — przykład modułu Tasks
+  --------------------------------------------------
+  Katalog: backend/core/repository/psql/tasks/
+
+  Każdy plik odpowiada jednej operacji na bazie:
+
+    create.py    — tworzy rekord Tasks, zwraca {status, data}
+    collection.py — pobiera listę zadań filtrowaną po active
+    update.py    — update_task_psql (description, time)
+                   update_task_active_psql (zmiana active)
+    delete.py    — usuwa zadanie po UUID, zwraca usunięty rekord
+    statistics.py — agreguje statystyki w zakresie dat:
+                    total_tasks, total_time, average_per_week,
+                    average_time_per_week, tasks_per_day
+
+  Każda funkcja używa get_db() z kontekstu SQLAlchemy,
+  zamyka sesję w bloku finally.
+
+
+  2.7 MODELE BAZY DANYCH (SQLAlchemy ORM)
+  ----------------------------------------
+  Wszystkie modele dziedziczą po Base z database/db.py.
+
+  Users (database/auth/models.py):
+    id UUID PK, username String, password String, type String
+
+  Tasks (database/tasks/models.py):
+    id UUID PK, description String, time Integer,
+    active Boolean, created_at DateTime, updated_at DateTime
+
+  Logs (database/logs/models.py):
+    id UUID PK, username String, description String, date Date
+
+  NamesOverdue (database/outstanding_money/models.py):
+    id UUID PK, name String
+
+  OutstandingMoney (database/outstanding_money/models.py):
+    id UUID PK, amount Float, name String, date Date,
+    id_name UUID FK -> NamesOverdue.id
+
+
+  2.8 POŁĄCZENIE Z BAZĄ — database/db.py
+  ----------------------------------------
+  Używa SQLAlchemy create_engine z connection pool.
+  Hasło z @ kodowane przez urllib.parse.quote_plus
+  (obsługa znaków specjalnych w haśle, np. "zaq1@WSX").
+
+    data_base_url = f"postgresql://{user}:{quote_plus(password)}@{host}:{port}/{dbName}"
+    engine = create_engine(data_base_url)
+
+  Funkcja get_db() zwraca generator sesji (używana przez Depends
+  w FastAPI oraz mockowana w testach przez monkeypatch).
+
+
+  2.9 KOMENDY DEWELOPERSKIE (backend/makefile)
+  ---------------------------------------------
+    make install_dependencies  -- pip install -r requirements.txt
+    make run_app               -- uvicorn main:app --reload --port 3000
+    make compose_build         -- docker compose -f local.docker-compose.yaml build
+    make compose_up            -- docker compose -f local.docker-compose.yaml up -d
+    make compose_down          -- docker compose -f local.docker-compose.yaml down
+    make run_test              -- pytest -s -v -m ""
+
+
+----------------------------------------------------------------
+ 3. FRONTEND — Vue 3 + TypeScript
+----------------------------------------------------------------
+
+  3.1 STRUKTURA KATALOGÓW
+  ------------------------
+  frontend/
+  ├── src/
+  │   ├── pages/               5 stron aplikacji (widoki)
+  │   │   ├── LoginPanel.vue
+  │   │   ├── Tasks.vue
+  │   │   ├── MoneySettlement.vue
+  │   │   ├── FuelCalculator.vue
+  │   │   └── Logs.vue
+  │   ├── components/          komponenty UI pogrupowane per moduł
+  │   │   ├── Header/          nawigacja
+  │   │   ├── Tasks/
+  │   │   ├── MoneySettlement/
+  │   │   ├── FuelCalculator/
+  │   │   ├── Logs/
+  │   │   └── LoginPanel/
+  │   ├── stores/              Pinia stores (stan globalny)
+  │   │   ├── auth/
+  │   │   ├── tasks/
+  │   │   ├── moneySettlement/
+  │   │   ├── fuelCalculator/
+  │   │   ├── log/
+  │   │   ├── modals/
+  │   │   └── notification/
+  │   ├── api/                 funkcje wywołań HTTP (fetch/axios)
+  │   ├── router/index.ts      definicja tras + guard isAuth
+  │   ├── composable/          logika wielokrotnego użytku
+  │   │   └── navigation.ts    przekierowania po zalogowaniu
+  │   ├── utils/paths.ts       stałe ścieżek URL tras
+  │   ├── types/               typy TypeScript
+  │   ├── lang/pl.json         tłumaczenia (vue-i18n)
+  │   └── assets/              style globalne, fonty
+  ├── __tests__/test/          testy Cypress E2E
+  ├── vite.config.ts           konfiguracja Vite (build tool)
+  ├── tailwind.config.js       konfiguracja Tailwind CSS
+  └── dockerfiles/             Dockerfile local i prod
+
+
+  3.2 ROUTING I OCHRONA TRAS
+  ---------------------------
+  Plik: frontend/src/router/index.ts
+
+  Trasy dostępne bez logowania:
+    /        → przekierowanie do /login
+    /login   → LoginPanel.vue
+
+  Trasy chronione (meta: { isAuth: true }):
+    /money-settlement  → MoneySettlement.vue
+    /fuel-calculator   → FuelCalculator.vue
+    /logs              → Logs.vue
+    /tasks             → Tasks.vue
+
+  Navigation guard (beforeEach): sprawdza obecność tokenu
+  w localStorage; brak tokenu przy próbie wejścia na trasę
+  z isAuth=true powoduje przekierowanie na /login.
+
+
+  3.3 ZARZĄDZANIE STANEM — Pinia Stores
+  ---------------------------------------
+  Każdy moduł ma własny store (frontend/src/stores/).
+  Schemat typowego store:
+
+    state:   ref() / reactive() z danymi pobranymi z API
+    actions: funkcje async wywołujące API i aktualizujące state
+    getters: computed() z pochodnym stanem
+
+  Store auth/ przechowuje dane zalogowanego użytkownika
+  (token, id, username) i odpowiada za logout.
+
+
+  3.4 BUDOWANIE I NARZĘDZIA
+  --------------------------
+  Vite 4.4.9   — bundler, HMR w trybie dev, tree-shaking w build
+  TypeScript 5  — statyczne typowanie całego kodu frontend
+  Tailwind 3    — utility-first CSS, responsywność
+  PrimeVue 4   — biblioteka gotowych komponentów UI
+  Chart.js 4   — wykresy (statystyki zadań)
+  vue-i18n     — internacjonalizacja (aktualnie tylko pl.json)
+
+
+----------------------------------------------------------------
+ 4. BAZA DANYCH — PostgreSQL
+----------------------------------------------------------------
+
+  Wersja: PostgreSQL (dowolna kompatybilna z psycopg2-binary 2.9.10)
+
+  Migracje:
+    backend/database/sql/database_up.sql    — tworzenie tabel
+    backend/database/sql/database_down.sql  — usuwanie tabel
+    backend/scripts/db_migration_up.sh      — uruchamia _up.sql
+    backend/scripts/db_migration_down.sh    — uruchamia _down.sql
+
+  Skrypty migracyjne czytają dane połączenia z env/local.env
+  i wykonują SQL przez psql. Wymagają zainstalowanego klienta psql
+  na maszynie uruchamiającej skrypt.
+
+
+----------------------------------------------------------------
+ 5. DOCKER — środowisko lokalne
+----------------------------------------------------------------
+
+  5.1 PLIKI DOCKER
+  -----------------
+  backend/dockerfiles/local.dockerfile
+    FROM python:3.13-slim
+    COPY requirements.txt → pip install
+    COPY . .
+    CMD: uvicorn main:app --host 0.0.0.0 --port 3000
+
+  frontend/dockerfiles/local.dockerfile
+    FROM node:20-alpine
+    COPY package.json → npm install
+    COPY . .
+    CMD: npm run dev -- --host 0.0.0.0 --port 5173
+
+
+  5.2 URUCHOMIENIE LOKALNE (root docker-compose.yaml)
+  -----------------------------------------------------
+  Plik: docker-compose.yaml (katalog główny)
+
+  Serwisy:
+    backend  — obraz z backend/dockerfiles/local.dockerfile
+               port 3000:3000, zmienne z backend/env/local.env
+    frontend — obraz z frontend/dockerfiles/local.dockerfile
+               port 5173:5173
+
+  Połączenie backend → PostgreSQL:
+    DB_HOST=host.docker.internal
+    (kontener łączy się z bazą na maszynie hosta przez Docker Desktop)
+
+  Komendy (root makefile):
+    make compose_build   -- docker compose -f docker-compose.yaml build
+    make compose_up      -- docker compose -f docker-compose.yaml up -d --build
+    make compose_down    -- docker compose -f docker-compose.yaml down
+
+
+----------------------------------------------------------------
+ 6. DOCKER SWARM — środowisko produkcyjne
+----------------------------------------------------------------
+
+  6.1 OPIS KONFIGURACJI
+  ----------------------
+  W środowisku produkcyjnym projekt uruchamiany jest jako
+  Docker Swarm stack. Swarm zarządza replikami kontenerów,
+  polityką restartowania i integracją z Traefik.
+
+  Traefik pełni rolę reverse proxy:
+    - automatyczne certyfikaty HTTPS (Let's Encrypt)
+    - routing po hostname do odpowiedniego serwisu
+    - health check i retry middleware
+
+
+  6.2 BACKEND — prod.swarm.docker-compose.yaml
+  ----------------------------------------------
+  Plik: backend/prod.swarm.docker-compose.yaml
+
+  Serwis: fastapi_backend_project_job
+    image:    arturscibor/praca.server.arturscibor.pl:latest
+    network:  traefik-public (zewnętrzna, zarządzana przez Traefik)
+    replicas: 2  (dwie instancje dla dostępności)
+    restart:  on-failure
+
+  Traefik labels:
+    Host:        praca.server.arturscibor.pl
+    Entrypoint:  websecure (port 443, HTTPS)
+    TLS:         certresolver=myresolver (Let's Encrypt)
+    Port:        3000 (wewnętrzny port FastAPI)
+    Health:      /health co 10s, timeout 5s
+    Retry:       3 próby przy błędzie
+
+
+  6.3 FRONTEND — prod.swarm.docker-compose.yaml
+  -----------------------------------------------
+  Plik: frontend/prod.swarm.docker-compose.yaml
+
+  Serwis: app_frontend_project_job
+    image:    arturscibor/praca.strona.arturscibor.pl:latest
+    network:  traefik-public
+    replicas: 1
+    restart:  on-failure
+
+  Traefik labels:
+    Host:       praca.strona.arturscibor.pl
+    Entrypoint: websecure (HTTPS)
+    Port:       80 (nginx serwuje zbudowany SPA)
+    Retry:      2 próby
+
+
+  6.4 SKRYPTY DEPLOY
+  -------------------
+  backend/scripts/swarm_deploy.sh
+  frontend/scripts/swarm_deploy.sh
+
+  Skrypt swarm_deploy.sh wykonuje:
+    docker stack deploy -c prod.swarm.docker-compose.yaml <stack_name>
+  Przyjmuje parametr z timestampem wersji (np. 202505011234)
+  używanym do tagowania obrazów Docker.
+
+
+----------------------------------------------------------------
+ 7. CI/CD — GitHub Actions
+----------------------------------------------------------------
+
+  7.1 BACKEND — PIPELINE (3 workflow pliki)
+  ------------------------------------------
+  Katalog: backend/.github/workflows/
+
+  run_main.yml  (trigger: push na branch main + workflow_dispatch)
+  ├── job: ci   — wywołuje run_ci.yml
+  ├── job: cd   — wywołuje run_cd.yml (po sukcesie ci)
+  └── job: report — raport błędu jeśli ci lub cd się nie powiedzie
+
+  run_ci.yml  (CI — budowanie i publikacja obrazu Docker)
+    Kroki:
+      1. Checkout repozytorium
+      2. Generowanie wersji: APP_VERSION = timestamp (YYYYMMDDHHmm)
+      3. Zmiana trybu na prod: scripts/run_mode.sh prod
+      4. Logowanie do DockerHub (secrets: DOCKER_USERNAME, DOCKER_PASSWORD)
+      5. Budowanie obrazu: docker build -f dockerfiles/prod.dockerfile
+         Tag: arturscibor/praca.server.arturscibor.pl:<APP_VERSION>
+              arturscibor/praca.server.arturscibor.pl:latest
+      6. Push obu tagów do DockerHub
+      7. Zapisanie APP_VERSION i image_name jako artefakty GitHub Actions
+
+  run_cd.yml  (CD — deploy na serwer przez SSH + Docker Swarm)
+    Secrets wymagane: SSH_PRIVATE_KEY, DOPPLER_TOKEN,
+                      HOST_NAME, HOST_IP, HOST_NAME_SSH
+    Kroki:
+      1. Konfiguracja agenta SSH (webfactory/ssh-agent@v0.9.0)
+      2. Dodanie hosta do known_hosts (ssh-keyscan)
+      3. SSH na serwer: usunięcie i ponowne sklonowanie repozytorium
+         do /var/www/pracaArturScibor/praca.server.arturscibor.pl
+      4. Pobranie zmiennych środowiskowych przez Doppler CLI:
+         doppler secrets download --project server_job --config prd
+         → zapisane jako env/prod.env na serwerze
+      5. Deploy przez Docker Swarm:
+         a. docker stack deploy -c dockerfiles/terafik/traefik.yml traefik
+         b. docker stack deploy -c prod.swarm.docker-compose.yaml project_job_service
+         c. docker image prune -f (czyszczenie starych obrazów)
+      6. Usunięcie sklonowanych plików z serwera (bezpieczeństwo)
+
+
+  7.2 FRONTEND — PIPELINE (5 workflow pliki)
+  -------------------------------------------
+  Katalog: frontend/.github/workflows/
+
+  runner.yml    (trigger: push na main, workflow_dispatch)
+    Orkiestruje pozostałe workflow w kolejności.
+
+  dependencies.yml
+    Instalacja zależności npm i cache dla kolejnych jobów.
+
+  build.yml
+    Budowanie obrazu Docker z frontendem:
+      docker build -f dockerfiles/prod.dockerfile
+      Push do DockerHub: arturscibor/praca.strona.arturscibor.pl
+
+  test.yml
+    Uruchomienie testów Cypress E2E (headless).
+
+  deploy.yml  (deploy frontendu na serwer)
+    Secrets: SSH_PRIVATE_KEY, SUDO_PASSWORD
+    Kroki:
+      1. Konfiguracja SSH agent
+      2. ssh-keyscan arturscibor.pl + 146.59.93.12 → known_hosts
+      3. SSH na serwer (artur@arturscibor.pl):
+         - Usunięcie i ponowne sklonowanie repo frontendu
+           do /var/www/pracaArturScibor/praca.strona.arturscibor.pl
+         - Skopiowanie pliku .env z /var/www/envs/projectJob/frontend/
+      4. Budowanie i push obrazu Docker:
+         ssh → scripts/upload_compose.sh <timestamp>
+      5. Deploy Docker Swarm:
+         ssh → scripts/swarm_deploy.sh <timestamp>
+         (sudo timeout 900 — max 15 minut na deploy)
+
+
+  7.3 SEKRETY GITHUB ACTIONS
+  ---------------------------
+  Backend:
+    DOCKER_USERNAME       — login DockerHub
+    DOCKER_PASSWORD       — hasło/token DockerHub
+    DOPPLER_TOKEN         — token Doppler (menedżer sekretów)
+    HOST_NAME             — hostname serwera (np. praca.server.arturscibor.pl)
+    HOST_IP               — IP serwera (np. 146.59.93.12)
+    HOST_NAME_SSH         — user@hostname do SSH
+    SSH_PRIVATE_KEY       — klucz prywatny SSH do logowania na serwer
+
+  Frontend (dodatkowo):
+    SUDO_PASSWORD         — hasło sudo na serwerze (do rm -rf /var/www/...)
+
+
+  7.4 ZARZĄDZANIE SEKRETAMI PRODUKCYJNYMI — Doppler
+  ---------------------------------------------------
+  Backend używa Dopplera jako zewnętrznego menedżera sekretów.
+  Zamiast przechowywać .env w repozytorium lub jako GitHub Secret,
+  pipeline pobiera aktualne sekrety bezpośrednio z Doppler CLI
+  podczas każdego deploymentu:
+
+    doppler secrets download \
+      --token $DOPPLER_TOKEN \
+      --project server_job \
+      --config prd \
+      --no-file --format env > ./env/prod.env
+
+  Dzięki temu zmiana sekretu w Doppler jest automatycznie
+  uwzględniana przy kolejnym deploymencie bez modyfikacji kodu.
+
+
+----------------------------------------------------------------
+ 8. KONFIGURACJA ŚRODOWISKA
+----------------------------------------------------------------
+
+  backend/env/local.env        -- lokalne: host, port, dane DB,
+                                  klucze JWT, czas ważności tokenów
+  backend/env/prod.env         -- produkcja: generowany przez Doppler
+
+  Kluczowe zmienne:
+    DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+    SECRET_KEY_TOKEN, SECRET_KEY_REFRESH_TOKEN
+    ALGORITHM (HS256)
+    TOKEN_EXPIRES_HOURS, REFRESH_TOKEN_EXPIRES_HOURS
+
+  Zmienne wczytywane przez python-dotenv w database/db.py
+  i core/helper/validators.py (get_env_variable).
+
+
+================================================================

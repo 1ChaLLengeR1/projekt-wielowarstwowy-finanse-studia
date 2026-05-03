@@ -1,0 +1,47 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam class {
+  BackgroundColor LightBlue
+  BorderColor DarkSlateGray
+  ArrowColor DarkSlateGray
+}
+
+class Users {
+  +id : UUID <<PK>>
+  +username : String
+  +password : String
+  +type : String
+}
+
+class Tasks {
+  +id : UUID <<PK>>
+  +description : String
+  +time : Integer
+  +active : Boolean
+  +created_at : DateTime
+  +updated_at : DateTime
+}
+
+class Logs {
+  +id : UUID <<PK>>
+  +username : String
+  +description : String
+  +date : Date
+}
+
+class NamesOverdue {
+  +id : UUID <<PK>>
+  +name : String
+}
+
+class OutstandingMoney {
+  +id : UUID <<PK>>
+  +id_name : UUID <<FK>>
+  +name : String
+  +amount : Float
+  +date : Date
+}
+
+NamesOverdue "1" o-- "0..*" OutstandingMoney : zawiera
+
+@enduml

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Artek\\\\Desktop\\\\projekt_wielowarstwowy\\\\backend\" | Where-Object {$_.PSIsContainer -eq $false})",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Artek\\\\Desktop\\\\projekt_wielowarstwowy\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Artek\\\\Desktop\\\\projekt_wielowarstwowy\" -Depth 2)",
+      "Bash(Format-Table -Property Name, FullName)",
+      "Bash(Select-Object -First 50)"
+    ]
+  }
+}

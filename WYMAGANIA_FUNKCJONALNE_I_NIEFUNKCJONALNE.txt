@@ -1,0 +1,228 @@
+================================================================
+     WYMAGANIA FUNKCJONALNE I NIEFUNKCJONALNE
+     Projekt: System Zarządzania Finansami i Zadaniami
+================================================================
+
+
+----------------------------------------------------------------
+ 1. WPROWADZENIE
+----------------------------------------------------------------
+
+System to wielowarstwowa aplikacja webowa składająca się z:
+  - backendu REST API (FastAPI, Python)
+  - frontendu SPA (Vue 3, TypeScript)
+  - bazy danych (PostgreSQL)
+
+Aplikacja umożliwia zalogowanemu użytkownikowi zarządzanie
+zadaniami, rozliczeniami finansowymi, przeglądanie logów
+oraz obliczanie kosztów paliwa.
+
+
+----------------------------------------------------------------
+ 2. WYMAGANIA FUNKCJONALNE
+----------------------------------------------------------------
+
+Wymagania funkcjonalne opisują co system musi robić —
+jakie operacje i funkcje udostępnia użytkownikowi.
+
+
+  WF-01  UWIERZYTELNIANIE UŻYTKOWNIKA
+  ------------------------------------
+  System musi umożliwiać logowanie użytkownika na podstawie
+  nazwy użytkownika i hasła.
+
+  Szczegóły:
+    WF-01a  Użytkownik podaje nazwę użytkownika i hasło
+            w formularzu logowania (LoginPanel).
+    WF-01b  System weryfikuje hasło z użyciem skrótu bcrypt
+            przechowywanego w bazie danych.
+    WF-01c  Po poprawnym logowaniu system generuje i zwraca
+            access token (JWT) oraz refresh token (JWT).
+    WF-01d  Dostęp do chronionych zasobów wymaga przesłania
+            ważnego access tokenu w nagłówku Authorization.
+    WF-01e  Próba wejścia na chronioną stronę bez tokenu
+            skutkuje automatycznym przekierowaniem na /login.
+
+
+  WF-02  ZARZĄDZANIE ZADANIAMI (Tasks)
+  -------------------------------------
+  System musi umożliwiać pełne zarządzanie zadaniami
+  z czasem ich wykonania.
+
+  Szczegóły:
+    WF-02a  Użytkownik może utworzyć nowe zadanie podając:
+            opis (description), czas trwania (time w minutach),
+            status aktywności (active: true/false).
+    WF-02b  Użytkownik może pobrać listę zadań filtrowaną
+            po statusie aktywności (active=true lub false).
+    WF-02c  Użytkownik może edytować opis i czas zadania.
+    WF-02d  Użytkownik może zmienić status zadania
+            (aktywne <-> nieaktywne).
+    WF-02e  Użytkownik może usunąć zadanie po jego ID.
+    WF-02f  System udostępnia statystyki zadań w zadanym
+            przedziale dat: łączna liczba zadań (total_tasks),
+            łączny czas (total_time), średnia na tydzień
+            (average_per_week), rozkład dzienny (tasks_per_day).
+
+
+  WF-03  ZARZĄDZANIE ROZLICZENIAMI (Outstanding Money)
+  -----------------------------------------------------
+  System musi umożliwiać prowadzenie list rozliczeń
+  finansowych z podziałem na listy i pozycje.
+
+  Szczegóły:
+    WF-03a  Użytkownik może utworzyć nazwaną listę rozliczeń
+            (np. "Pozyczki maj 2025").
+    WF-03b  Użytkownik może dodać pozycję do listy podając:
+            nazwę, kwotę (amount), datę (date).
+    WF-03c  Użytkownik może pobrać wszystkie listy
+            wraz z ich pozycjami.
+    WF-03d  Użytkownik może zmienić nazwę istniejącej listy.
+    WF-03e  Użytkownik może usunąć pojedynczą pozycję z listy.
+    WF-03f  Użytkownik może usunąć całą listę rozliczeń.
+
+
+  WF-04  KALKULATOR PALIWA (Fuel Calculator)
+  -------------------------------------------
+  System musi obliczać koszty i zużycie paliwa na podstawie
+  parametrów podanych przez użytkownika.
+
+  Szczegóły:
+    WF-04a  Użytkownik wprowadza parametry przejazdu
+            (dystans, spalanie, cena paliwa).
+    WF-04b  System zwraca wynik obliczeń (koszt, zużycie).
+    WF-04c  Wynik wyświetlany jest na stronie FuelCalculator.
+
+
+  WF-05  PRZEGLĄDANIE LOGÓW (Logs)
+  ----------------------------------
+  System musi rejestrować i udostępniać logi zdarzeń.
+
+  Szczegóły:
+    WF-05a  System umożliwia tworzenie nowych wpisów logu
+            z opisem zdarzenia i datą.
+    WF-05b  Użytkownik może pobrać listę ostatnich N logów
+            (parametr liczbowy w URL).
+    WF-05c  Logi wyświetlane są na stronie Logs
+            posortowane od najnowszych.
+
+
+----------------------------------------------------------------
+ 3. WYMAGANIA NIEFUNKCJONALNE
+----------------------------------------------------------------
+
+Wymagania niefunkcjonalne opisują jak system musi działać —
+jakość, wydajność, bezpieczeństwo i warunki eksploatacji.
+
+
+  WNF-01  BEZPIECZENSTWO
+  -----------------------
+  WNF-01a  Hasła użytkowników przechowywane są wyłącznie
+           jako skróty bcrypt — nigdy w postaci jawnej.
+  WNF-01b  Autoryzacja oparta o JWT (algorytm HS256).
+           Access token ma ograniczony czas ważności
+           (TOKEN_EXPIRES_HOURS), refresh token —
+           dłuższy (REFRESH_TOKEN_EXPIRES_HOURS).
+  WNF-01c  Wszystkie chronione endpointy backendu
+           wymagają nagłówka Authorization: Bearer <token>.
+           Brak lub nieważny token zwraca HTTP 403.
+  WNF-01d  Klucze JWT (SECRET_KEY_TOKEN, SECRET_KEY_REFRESH_TOKEN)
+           przechowywane są jako zmienne środowiskowe,
+           nie w kodzie źródłowym.
+  WNF-01e  W środowisku produkcyjnym sekrety zarządzane są
+           przez zewnętrzny menedżer Doppler (nie .env w repo).
+  WNF-01f  Komunikacja produkcyjna odbywa się przez HTTPS
+           (certyfikaty Let's Encrypt via Traefik).
+  WNF-01g  Frontend chroni trasy przez navigation guard (isAuth):
+           brak tokenu w localStorage -> przekierowanie na /login.
+
+
+  WNF-02  WYDAJNOSC I CZAS ODPOWIEDZI
+  -------------------------------------
+  WNF-02a  Backend oparty o FastAPI z asynchronicznym
+           serwerem Uvicorn — obsługuje wiele równoczesnych
+           żądań bez blokowania.
+  WNF-02b  Zapytania do bazy realizowane przez SQLAlchemy ORM
+           z connection poolem — minimalizuje czas nawiązywania
+           połączeń.
+  WNF-02c  Endpointy API powinny odpowiadać w czasie
+           poniżej 500 ms dla typowych operacji CRUD.
+  WNF-02d  W środowisku produkcyjnym backend uruchomiony
+           w 2 replikach (Docker Swarm replicas: 2)
+           dla równoważenia obciążenia.
+
+
+  WNF-03  RESPONSYWNOSC INTERFEJSU UZYTKOWNIKA
+  ----------------------------------------------
+  WNF-03a  Interfejs zbudowany z użyciem Tailwind CSS
+           (utility-first) — układ responsywny,
+           dostosowany do różnych rozdzielczości ekranu.
+  WNF-03b  Komponenty UI oparte o bibliotekę PrimeVue 4,
+           zapewniającą spójny wygląd i dostępność (a11y).
+  WNF-03c  Aplikacja frontendowa jest SPA (Single Page App) —
+           nawigacja między stronami nie wymaga przeładowania
+           całej strony (Vue Router).
+  WNF-03d  Stan aplikacji zarządzany przez Pinia stores —
+           dane pobrane z API dostępne globalnie bez
+           ponownych żądań przy zmianie widoku.
+
+
+  WNF-04  PRZENOSNOSC I DOSTEPNOSC PRZEZ DOCKER
+  -----------------------------------------------
+  WNF-04a  Aplikacja uruchamialna lokalnie jedną komendą:
+           docker compose up (root docker-compose.yaml).
+  WNF-04b  Frontend i backend działają jako osobne kontenery
+           Docker z dedykowanymi Dockerfile (local i prod).
+  WNF-04c  Środowisko lokalne nie wymaga ręcznej instalacji
+           Pythona ani Node.js na maszynie hosta.
+  WNF-04d  Konfiguracja środowiska przekazywana przez
+           zmienne środowiskowe (pliki .env) — bez zmiany
+           kodu źródłowego przy zmianie środowiska.
+  WNF-04e  Środowisko produkcyjne: Docker Swarm z Traefik
+           jako reverse proxy (HTTPS, health check, retry).
+
+
+  WNF-05  ARCHITEKTURA I UTRZYMYWALNOSC
+  ---------------------------------------
+  WNF-05a  Backend zbudowany warstwowo:
+             api (routing) -> handler (logika) ->
+             repository (baza) -> database (ORM/modele).
+           Każda warstwa ma jednoznacznie określoną odpowiedzialność.
+  WNF-05b  Walidacja danych wejściowych realizowana przez
+           Pydantic (schematy request/response) — błędne
+           dane odrzucane przed dotarciem do logiki biznesowej.
+  WNF-05c  Ścieżki URL przechowywane jako stałe w routers.py
+           (backend) i paths.ts (frontend) — eliminacja
+           duplikacji i literówek w URL.
+  WNF-05d  Tłumaczenia UI przechowywane w lang/pl.json
+           (vue-i18n) — możliwość dodania kolejnych języków
+           bez modyfikacji komponentów.
+
+
+  WNF-06  CIAGLA INTEGRACJA I WDROZENIE (CI/CD)
+  -----------------------------------------------
+  WNF-06a  Każdy push na branch main uruchamia automatyczny
+           pipeline GitHub Actions (build -> test -> deploy).
+  WNF-06b  Backend i frontend posiadają osobne pipeline CI/CD
+           z możliwością niezależnego wdrożenia.
+  WNF-06c  Obrazy Docker wersjonowane timestampem (YYYYMMDDHHmm)
+           i tagiem :latest — możliwość rollbacku do poprzedniej wersji.
+
+
+----------------------------------------------------------------
+ 4. PODSUMOWANIE
+----------------------------------------------------------------
+
+  Typ wymagania          | Liczba wymagań
+  -----------------------|---------------
+  Funkcjonalne (WF)      | 5 grup, ~20 szczegółowych
+  Niefunkcjonalne (WNF)  | 6 grup, ~25 szczegółowych
+
+  Kluczowe priorytety systemu:
+    1. Bezpieczeństwo — JWT, bcrypt, HTTPS, zmienne środowiskowe
+    2. Przenośność    — Docker Compose (lokalne i produkcyjne)
+    3. Utrzymywalność — architektura warstwowa, walidacja Pydantic
+    4. UX             — responsywny interfejs, SPA, Pinia stores
+
+
+================================================================

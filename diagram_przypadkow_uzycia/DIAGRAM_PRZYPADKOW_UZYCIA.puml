@@ -1,0 +1,49 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor LightYellow
+  BorderColor DarkSlateGray
+}
+
+actor "Guest\n(niezalogowany)" as Guest
+actor "Admin" as Admin
+actor "SuperAdmin" as SuperAdmin
+
+Admin --|> Guest
+SuperAdmin --|> Admin
+
+rectangle "System Zarzadzania Finansami i Zadaniami" {
+
+  usecase "UC1: Logowanie" as UC1
+
+  usecase "UC2: Dodanie zadania" as UC2
+  usecase "UC3: Przegladanie zadan" as UC3
+  usecase "UC4: Edycja zadania" as UC4
+  usecase "UC5: Usuniecie zadania" as UC5
+  usecase "UC6: Statystyki zadan" as UC6
+
+  usecase "UC7: Tworzenie listy\nrozliczen" as UC7
+  usecase "UC8: Dodanie pozycji\ndo listy" as UC8
+  usecase "UC9: Usuniecie\npozycji lub listy" as UC9
+
+  usecase "UC10: Obliczenie\nkosztu paliwa" as UC10
+
+  usecase "UC11: Przegladanie\nlogow" as UC11
+}
+
+Guest --> UC1
+
+Admin --> UC10
+Admin --> UC11
+
+SuperAdmin --> UC2
+SuperAdmin --> UC3
+SuperAdmin --> UC4
+SuperAdmin --> UC5
+SuperAdmin --> UC6
+SuperAdmin --> UC7
+SuperAdmin --> UC8
+SuperAdmin --> UC9
+
+@enduml

@@ -1,0 +1,126 @@
+================================================================
+              STAN REALIZACJI PROJEKTU
+              na podstawie projekt_zakres.txt
+================================================================
+
+
+----------------------------------------------------------------
+ ZROBIONE
+----------------------------------------------------------------
+
+  [x] WARSTWA LOGIKI BIZNESOWEJ — 5 pkt
+      Backend FastAPI (Python) z 5 modułami:
+        - auth          (login, autoryzacja JWT)
+        - fuel_calculator (kalkulator paliwa)
+        - logs          (tworzenie i pobieranie logów)
+        - outstanding_money (CRUD list i pozycji)
+        - tasks         (CRUD zadań + statystyki)
+      Architektura warstwowa: api → handler → repository → db
+      Middleware autoryzacji, walidacja danych (Pydantic)
+
+  [x] WARSTWA PREZENTACJI — 5 pkt
+      Frontend Vue 3 + TypeScript z 5 stronami:
+        - LoginPanel       (logowanie)
+        - MoneySettlement  (rozliczenia pieniędzy)
+        - FuelCalculator   (kalkulator paliwa)
+        - Logs             (przeglądanie logów)
+        - Tasks            (zarządzanie zadaniami)
+      Router z ochroną tras (meta: isAuth), Pinia stores,
+      i18n (pl.json), Tailwind CSS, PrimeVue
+
+  [x] BAZA DANYCH — 4 pkt
+      PostgreSQL z tabelami: users, logs, namesoverdue,
+      outstandingmoney, tasks
+      SQLAlchemy ORM, migracje SQL (database_up/down.sql),
+      skrypty migracyjne (db_migration_up/down.sh)
+
+  [x] DOCKER COMPOSE — bonus (ocena 6,0)
+      docker-compose.yaml odpalający frontend + backend
+      Makefile z komendami: compose_build, compose_up, compose_down
+      Osobne Dockerfile dla local i prod (frontend + backend)
+
+  [x] OPIS SPOSOBÓW I METOD TESTOWANIA — 2 pkt
+      Dokument: OPIS_SPOSOBOW_I_METOD_TESTOWANIA.txt
+      Opisuje: pytest (~68 testów: helpers, middleware, repository),
+      Cypress E2E (LoginPanel), manualne testy Swagger UI + UI.
+
+  [x] DOKUMENTACJA TECHNICZNA KODU — grozi -0,25 do -1 pkt
+      Dokument: DOKUMENTACJA_TECHNICZNA_KODU.txt
+      Opisuje: architekturę, backend FastAPI, frontend Vue 3,
+      bazę danych, Docker local/prod, CI/CD GitHub Actions.
+
+  [x] TESTY
+      Backend — testy jednostkowe (pytest): ~68 testów, WSZYSTKIE PASS
+        tests/core/helper/test_headers.py         — 10 testów
+        tests/core/helper/test_validators.py      — 21 testów
+        tests/core/middleware/test_utils.py       —  6 testów
+        tests/core/middleware/test_basic_authorization.py — 14 testów
+        tests/core/repository/psql/tasks/test_create.py     — 3 testy
+        tests/core/repository/psql/tasks/test_collection.py — 3 testy
+        tests/core/repository/psql/tasks/test_update.py     — 5 testów
+        tests/core/repository/psql/tasks/test_delete.py     — 3 testy
+        tests/core/repository/psql/tasks/test_statistics.py — 3 testy
+
+      Manualne testowanie API — środowisko przygotowane:
+        Swagger UI dostępny pod /docs (generowany automatycznie przez FastAPI).
+        Umożliwia testowanie wszystkich endpointów bez dodatkowych narzędzi.
+
+
+  [x] WYMAGANIA FUNKCJONALNE I NIEFUNKCJONALNE — 2 pkt
+      Dokument: WYMAGANIA_FUNKCJONALNE_I_NIEFUNKCJONALNE.txt
+      WF: logowanie JWT, CRUD zadań, CRUD rozliczeń,
+          kalkulator paliwa, logi (5 grup, ~20 wymagań).
+      WNF: bezpieczeństwo, wydajność, responsywność UI,
+           Docker, architektura, CI/CD (6 grup, ~25 wymagań).
+
+
+  [x] DIAGRAMY PRZYPADKÓW UŻYCIA — 2 pkt
+      Plik: DIAGRAM_PRZYPADKOW_UZYCIA.puml (PlantUML)
+      Aktorzy: Guest, Admin, SuperAdmin (hierarchia dziedziczenia)
+      11 przypadków użycia: logowanie, zadania, rozliczenia,
+      kalkulator paliwa, logi.
+
+  [x] DIAGRAMY KLAS — 2 pkt
+      Plik: DIAGRAM_KLAS.puml (PlantUML)
+      Klasy: Users, Tasks, Logs, NamesOverdue, OutstandingMoney
+      Relacja: NamesOverdue 1 o-- 0..* OutstandingMoney
+
+
+----------------------------------------------------------------
+ SZACUNKOWE PUNKTY
+----------------------------------------------------------------
+
+  Obecny stan (bez dokumentacji PDF):
+    Logika biznesowa   5 / 5 pkt
+    Warstwa prezentacji 5 / 5 pkt
+    Baza danych        4 / 4 pkt
+    Dokumentacja       0 / 8 pkt
+    Testy backend      OK (ujemnych nie będzie za testy)
+    Punkty ujemne      ok. -0,5 pkt  (brak dok. funkcjonalnej + klas)
+    ─────────────────────────────
+    RAZEM             ~13,5 pkt  →  ocena: 3,5
+
+  Po napisaniu dokumentacji PDF:
+    Logika biznesowa   5 / 5 pkt
+    Warstwa prezentacji 5 / 5 pkt
+    Baza danych        4 / 4 pkt
+    Dokumentacja       8 / 8 pkt
+    Docker Compose     bonus
+    Punkty ujemne      0 pkt
+    ─────────────────────────────
+    RAZEM             22 pkt + Docker  →  ocena: 6,0
+
+
+----------------------------------------------------------------
+ CO ZROBIĆ W PIERWSZEJ KOLEJNOŚCI
+----------------------------------------------------------------
+
+  1. Napisać wymagania funkcjonalne i niefunkcjonalne
+  2. Narysować diagram przypadków użycia
+  3. Narysować diagram klas (modele bazy danych + relacje)
+  4. Opisać strategię testowania
+  5. Złożyć to w dokument PDF
+  6. Opcjonalnie: dopisać więcej testów Cypress (pozostałe strony)
+
+
+================================================================
