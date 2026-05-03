@@ -1,0 +1,27 @@
+# Auth
+LOGIN = "/authentication/login"
+AUTOMATICALLY_LOGIN = "/authentication/automatically_login/{user_id}"
+
+# Outstanding_money
+COLLECTION_OUTSTANDING_MONEY = "/outstanding_money/collection"
+CREATE_LIST_OUTSTANDING_MONEY = "/outstanding_money/create_list"
+ADD_ITEM_OUTSTANDING_MONEY = "/outstanding_money/add_item"
+EDIT_NAME_LIST_OUTSTANDING_MONEY = "/outstanding_money/edit_name_list"
+EDIT_ITEM_OUTSTANDING_MONEY = "/outstanding_money/edit_item"
+DELETE_LIST_OUTSTANDING_MONEY = "/outstanding_money/delete_list/{id}"
+DELETE_ITEM_OUTSTANDING_MONEY = "/outstanding_money/delete_item/{id}"
+
+# Logs
+COLLECTION_LOGS = "/logs/collection/{number}"
+CREATE_LOG = "/logs/create/{description}"
+
+# Fuel_calculator
+FUEL_CALCULATION = "/fuel/fuel_calculations"
+
+# Tasks
+CREATE_TASK = "/tasks/create"
+COLLECTION_TASKS = "/tasks/collection"
+UPDATE_TASKS = "/tasks/update/{task_id}"
+UPDATE_ACTIVE_TASKS = "/tasks/update/active/{task_id}"
+DELETE_TASK = "/tasks/delete/{task_id}"
+STATISTICS_TASK = "/tasks/statistics"
