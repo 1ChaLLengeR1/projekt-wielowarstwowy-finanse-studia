@@ -1,0 +1,32 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: dockerfiles/local.dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./backend/env/local.env
+    volumes:
+      - ./backend:/app
+    networks:
+      - project_job
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: dockerfiles/local.dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    env_file:
+      - ./frontend/.env
+    networks:
+      - project_job
+
+
+networks:
+  project_job:
+    driver: bridge

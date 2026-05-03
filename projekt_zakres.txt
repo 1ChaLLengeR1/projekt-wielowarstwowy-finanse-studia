@@ -1,0 +1,59 @@
+================================================================
+                    PROJEKT WIELOWARSTWOWY
+                       Zakres i wymagania
+================================================================
+
+Zadanie: Zaprojektuj system informatyczny w wybranych technologiach.
+Kompletny projekt musi zawierać implementację oraz dokumentację (PDF).
+
+
+----------------------------------------------------------------
+ DOKUMENTACJA
+----------------------------------------------------------------
+
+  [ 2 pkt. ]  Wymagania funkcjonalne i niefunkcjonalne
+  [ 2 pkt. ]  Diagramy przypadków użycia
+  [ 2 pkt. ]  Diagramy klas
+  [ 2 pkt. ]  Opis sposobów i metod testowania
+
+
+----------------------------------------------------------------
+ IMPLEMENTACJA
+----------------------------------------------------------------
+
+  [ 5 pkt. ]  Warstwa logiki biznesowej  (WYMAGANA do oceny 3)
+                  2 pkt. projekt  +  3 pkt. implementacja
+
+  [ 5 pkt. ]  Warstwa prezentacji
+                  2 pkt. projekt  +  3 pkt. implementacja
+
+  [ 4 pkt. ]  Baza danych
+                  2 pkt. projekt  +  2 pkt. implementacja
+
+
+----------------------------------------------------------------
+ PUNKTY UJEMNE
+----------------------------------------------------------------
+
+  [ -0,25 pkt.        ]  Brak lub błędne wymagania funkcjonalne/niefunkcjonalne
+  [ -0,25 pkt.        ]  Brak diagramów klas
+  [ -0,25 do -1 pkt.  ]  Brak testów jednostkowych
+  [ -0,25 do -1 pkt.  ]  Brak dokumentacji technicznej kodu
+
+
+----------------------------------------------------------------
+ SKALA OCEN
+----------------------------------------------------------------
+
+  2,0  —  < 12 pkt.
+  3,0  —  12–13 pkt.
+  3,5  —  14–16 pkt.
+  4,0  —  17–19 pkt.
+  4,5  —  20–21 pkt.
+  5,0  —  22 pkt.
+  6,0  —  22 pkt.  +  Docker Compose
+
+
+================================================================
+Ostatnia modyfikacja: sobota, 28 lutego 2026, 13:19
+================================================================

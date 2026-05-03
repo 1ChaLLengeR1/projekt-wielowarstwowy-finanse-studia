@@ -1,0 +1,273 @@
+================================================================
+           HARMONOGRAM REALIZACJI PROJEKTU
+                 Studia niestacjonarne
+================================================================
+
+Projekt realizowany jest w formule 4 zjazdów (sobota + niedziela).
+Celem jest zaprojektowanie systemu informatycznego w wybranych
+technologiach oraz przygotowanie dokumentacji projektowej,
+a w wariancie rozszerzonym również implementacji.
+
+UWAGA: Dopuszczalne jest oddanie projektu bez pełnej implementacji
+(specyfika studiów magisterskich). Ogranicza to jednak maksymalną
+ocenę, ponieważ znaczna część punktów dotyczy implementacji.
+
+
+================================================================
+ 1. WYMAGANIA DOTYCZĄCE PROJEKTU
+================================================================
+
+Kompletny projekt powinien zawierać:
+  - dokumentację w formacie PDF
+  - projekt systemu
+  - w miarę możliwości implementację wybranych lub wszystkich warstw
+
+----------------------------------------------------------------
+ DOKUMENTACJA
+----------------------------------------------------------------
+
+  [ 2 pkt. ]  Wymagania funkcjonalne i niefunkcjonalne
+  [ 2 pkt. ]  Diagramy przypadków użycia
+  [ 2 pkt. ]  Diagramy klas
+  [ 2 pkt. ]  Opis sposobów i metod testowania
+
+----------------------------------------------------------------
+ IMPLEMENTACJA
+----------------------------------------------------------------
+
+  [ 5 pkt. ]  Warstwa logiki biznesowej  (WYMAGANA do oceny 3)
+                  2 pkt. projekt  +  3 pkt. implementacja
+
+  [ 5 pkt. ]  Warstwa prezentacji
+                  2 pkt. projekt  +  3 pkt. implementacja
+
+  [ 4 pkt. ]  Baza danych
+                  2 pkt. projekt  +  2 pkt. implementacja
+
+----------------------------------------------------------------
+ PUNKTY UJEMNE
+----------------------------------------------------------------
+
+  [ -0,25 pkt.        ]  Brak lub błędne wymagania funkcjonalne/niefunkcjonalne
+  [ -0,25 pkt.        ]  Brak diagramów klas
+  [ -0,25 do -1 pkt.  ]  Brak testów jednostkowych
+  [ -0,25 do -1 pkt.  ]  Brak dokumentacji technicznej kodu
+
+----------------------------------------------------------------
+ SKALA OCEN
+----------------------------------------------------------------
+
+  2,0  —  < 12 pkt.
+  3,0  —  12–13 pkt.
+  3,5  —  14–16 pkt.
+  4,0  —  17–19 pkt.
+  4,5  —  20–21 pkt.
+  5,0  —  22 pkt.
+  6,0  —  22 pkt.  +  Docker Compose
+
+
+================================================================
+ 2. HARMONOGRAM — 4 ZJAZDY
+================================================================
+
+
+┌──────────────────────────────────────────────────────────────┐
+│  ZJAZD 1 — Analiza problemu i wymagania                      │
+└──────────────────────────────────────────────────────────────┘
+
+  SOBOTA | Wybór systemu i analiza problemu
+  ·········································
+    - wybór tematu projektu
+    - określenie celu systemu
+    - identyfikacja użytkowników i ich ról
+    - wstępny opis zakresu funkcjonalnego
+    - rozpoznanie ograniczeń technologicznych i organizacyjnych
+
+    Efekt dnia:
+      > wybrany temat projektu
+      > krótki opis projektowanego systemu
+      > wstępna koncepcja funkcji systemu
+
+  NIEDZIELA | Wymagania funkcjonalne i niefunkcjonalne
+  ·····················································
+    - opracowanie listy wymagań funkcjonalnych
+    - opracowanie listy wymagań niefunkcjonalnych
+    - doprecyzowanie oczekiwanych funkcji systemu
+    - weryfikacja spójności i kompletności wymagań
+    - identyfikacja głównych aktorów systemu
+
+    Efekt po zjeździe 1:
+      > opis systemu
+      > lista wymagań funkcjonalnych
+      > lista wymagań niefunkcjonalnych
+      > wstępna lista aktorów systemu
+
+  Co powinno być GOTOWE po zjeździe 1:
+    [x] temat projektu
+    [x] opis problemu i celu systemu
+    [x] wymagania funkcjonalne i niefunkcjonalne
+
+
+┌──────────────────────────────────────────────────────────────┐
+│  ZJAZD 2 — Modelowanie UML i architektura warstwowa          │
+└──────────────────────────────────────────────────────────────┘
+
+  SOBOTA | Diagramy przypadków użycia
+  ·····································
+    - opracowanie diagramu przypadków użycia
+    - powiązanie przypadków użycia z aktorami
+    - opis najważniejszych scenariuszy działania systemu
+    - weryfikacja pokrycia wymagań funkcjonalnych
+
+    Efekt dnia:
+      > diagram przypadków użycia
+      > opis najważniejszych scenariuszy użycia
+
+  NIEDZIELA | Diagram klas i architektura wielowarstwowa
+  ·······················································
+    - identyfikacja encji i obiektów systemu
+    - opracowanie diagramu klas
+    - określenie relacji pomiędzy klasami
+    - podział systemu na warstwy:
+        · warstwa prezentacji
+        · warstwa logiki biznesowej
+        · warstwa danych / baza danych
+    - wskazanie planowanych technologii
+
+    Efekt po zjeździe 2:
+      > gotowy diagram przypadków użycia
+      > gotowy diagram klas
+      > wstępny opis architektury wielowarstwowej
+      > lista technologii
+
+  Co powinno być GOTOWE po zjeździe 2:
+    [x] diagram przypadków użycia
+    [x] diagram klas
+    [x] opis architektury systemu
+    [x] podział odpowiedzialności między warstwami
+
+
+┌──────────────────────────────────────────────────────────────┐
+│  ZJAZD 3 — Projekt techniczny i rozpoczęcie realizacji       │
+└──────────────────────────────────────────────────────────────┘
+
+  SOBOTA | Projekt logiki biznesowej i bazy danych
+  ··················································
+    - szczegółowy projekt warstwy logiki biznesowej
+    - zdefiniowanie reguł biznesowych
+    - zaprojektowanie struktury bazy danych
+    - określenie tabel, relacji, kluczy i ograniczeń
+    - opis komunikacji pomiędzy warstwami
+
+    Efekt dnia:
+      > projekt logiki biznesowej
+      > projekt bazy danych
+      > opis przepływu danych w systemie
+
+  NIEDZIELA | Opis testowania oraz prace implementacyjne
+  ·······················································
+
+    ŚCIEŻKA A — projektowa (bez pełnej implementacji):
+      - opracowanie projektu warstwy prezentacji
+      - opis interfejsów użytkownika
+      - opracowanie sposobów i metod testowania
+      - przygotowanie dokumentacji technicznej projektu
+      - uzupełnienie brakujących elementów dokumentacji
+
+    ŚCIEŻKA B — projektowo-implementacyjna:
+      - rozpoczęcie implementacji logiki biznesowej
+      - rozpoczęcie implementacji warstwy prezentacji
+      - utworzenie i konfiguracja bazy danych
+      - przygotowanie testów jednostkowych
+      - uzupełnianie dokumentacji technicznej kodu
+
+    Efekt po zjeździe 3:
+      > opis sposobów i metod testowania
+      > projekt wszystkich warstw systemu
+      > rozpoczęta implementacja albo kompletny projekt techniczny
+
+  Co powinno być GOTOWE po zjeździe 3:
+    [x] opis testowania
+    [x] projekt logiki biznesowej
+    [x] projekt warstwy prezentacji
+    [x] projekt bazy danych
+    [x] wersja robocza implementacji lub kompletna dokumentacja techniczna
+
+
+┌──────────────────────────────────────────────────────────────┐
+│  ZJAZD 4 — Finalizacja, testy i prezentacja projektu         │
+└──────────────────────────────────────────────────────────────┘
+
+  SOBOTA | Finalizacja dokumentacji i dopracowanie projektu
+  ··········································· ··············
+    - uporządkowanie końcowej dokumentacji PDF
+    - sprawdzenie kompletności projektu
+    - korekta diagramów i opisów
+    - uzupełnienie brakujących elementów
+    - dokończenie implementacji (jeśli realizowana)
+    - przygotowanie demonstracji projektu
+
+    Efekt dnia:
+      > prawie gotowa wersja końcowa projektu
+      > kompletna dokumentacja
+      > przygotowanie do prezentacji
+
+  NIEDZIELA | Oddanie i prezentacja projektu
+  ············································
+    - prezentacja założeń systemu
+    - omówienie wymagań i diagramów
+    - przedstawienie architektury wielowarstwowej
+    - omówienie logiki biznesowej
+    - prezentacja działania aplikacji (jeśli zaimplementowana)
+    - omówienie testów
+    - dla najlepszych projektów: demonstracja Docker Compose
+
+    Efekt po zjeździe 4:
+      > kompletny projekt gotowy do oceny
+
+  Co należy ODDAĆ na końcu:
+    [x] dokumentacja w formacie PDF
+    [x] kod źródłowy lub kompletny projekt techniczny
+    [x] pliki związane z bazą danych
+    [ ] testy jednostkowe (jeśli wykonane)
+    [ ] konfiguracja Docker Compose (opcjonalnie)
+
+
+================================================================
+ 3. MOŻLIWE ŚCIEŻKI REALIZACJI
+================================================================
+
+  ŚCIEŻKA MINIMALNA — projektowa
+  ································
+  Dopuszczalne jest oddanie projektu bez pełnej implementacji.
+  Student powinien przygotować kompletną dokumentację oraz
+  szczegółowy projekt wszystkich warstw systemu.
+  Umożliwia uzyskanie zaliczenia, ale nie najwyższych ocen.
+
+  ŚCIEŻKA ROZSZERZONA — projektowo-implementacyjna
+  ··················································
+  Dokumentacja + implementacja logiki biznesowej, warstwy
+  prezentacji, bazy danych, testów jednostkowych oraz
+  dokumentacji technicznej kodu.
+
+  OCENA 5,0 i 6,0
+  ·················
+  5,0 — maksymalna liczba punktów
+  6,0 — maksymalna liczba punktów + Docker Compose
+
+
+================================================================
+ 4. REKOMENDOWANY SPOSÓB PRACY
+================================================================
+
+  Zjazd 1  →  analiza problemu i wymagania
+  Zjazd 2  →  UML i architektura warstwowa
+  Zjazd 3  →  projekt techniczny, baza danych, testowanie,
+              rozpoczęcie implementacji
+  Zjazd 4  →  finalizacja dokumentacji, testy, prezentacja,
+              oddanie projektu
+
+  Podejście pozwala zarówno osobom z doświadczeniem
+  programistycznym, jak i mniej technicznym, na stopniowe
+  zrealizowanie projektu i świadome zaplanowanie zakresu prac.
+

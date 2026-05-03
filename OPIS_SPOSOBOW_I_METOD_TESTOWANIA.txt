@@ -1,0 +1,399 @@
+﻿================================================================
+     OPIS SPOSOBÓW I METOD TESTOWANIA
+     Projekt: System Zarządzania Finansami i Zadaniami
+================================================================
+
+
+----------------------------------------------------------------
+ 1. PRZEGLĄD STRATEGII TESTOWANIA
+----------------------------------------------------------------
+
+W projekcie zastosowano trzy uzupełniające się metody testowania:
+
+  1. Testy jednostkowe backendu — pytest (automatyczne)
+  2. Testy E2E frontendu     — Cypress (automatyczne)
+  3. Manualne testy API      — Swagger UI /docs (ręczne)
+
+Podejście to pokrywa zarówno izolowaną logikę (jednostkowe),
+jak i integrację warstw (manualne) oraz zachowanie UI (E2E).
+
+
+----------------------------------------------------------------
+ 2. TESTY JEDNOSTKOWE BACKENDU (pytest)
+----------------------------------------------------------------
+
+  Technologia: pytest 8.3.5
+  Uruchomienie: pytest -s -v -m ""
+                (z katalogu backend/, po aktywacji środowiska)
+  Konfiguracja: backend/pytest.ini
+                  pythonpath = .
+                  asyncio_mode = auto
+                  testpaths = tests
+
+  Wyniki: ~68 testów, WSZYSTKIE PASS
+
+
+  2.1 WARSTWA HELPERY — nagłówki HTTP
+  ------------------------------------
+  Plik: tests/core/helper/test_headers.py
+  Testowana funkcja: check_required_headers() z core/helper/headers.py
+
+  Scenariusze testowe (10 testów):
+
+    TC-H01  Brak jednego wymaganego nagłówka
+            Wejście: pusty słownik headers, wymagany ["Authorization"]
+            Oczekiwany wynik: status=ERROR, status_code=403,
+            komunikat zawiera nazwę brakującego nagłówka.
+
+    TC-H02  Brak kilku wymaganych nagłówków jednocześnie
+            Wejście: pusty headers, wymagane ["Authorization","UserData"]
+            Oczekiwany wynik: ERROR 403, obie nazwy w komunikacie.
+
+    TC-H03  Pusta lista wymaganych nagłówków
+            Wejście: pusty headers, wymagane []
+            Oczekiwany wynik: SUCCESS 200, data=[].
+
+    TC-H04  Nagłówek UserData z poprawnym JSON
+            Wejście: UserData: {"id":"123","role":"admin"}
+            Oczekiwany wynik: SUCCESS 200, sparsowany obiekt w data.
+
+    TC-H05  Nagłówek UserData z niepoprawnym JSON
+            Wejście: UserData: "not-valid-json"
+            Oczekiwany wynik: ERROR 403, "Invalid JSON format" w komunikacie.
+
+    TC-H06  Nagłówek X-Refresh-Token
+            Wejście: X-Refresh-Token: "some-token-value"
+            Oczekiwany wynik: SUCCESS 200, wartość tokenu w data.
+
+    TC-H07  Oba nagłówki UserData i X-Refresh-Token jednocześnie
+            Oczekiwany wynik: SUCCESS, obie wartości w data.
+
+    TC-H08  Nagłówek Authorization nie trafia do data (tylko walidacja)
+            Wejście: Authorization: "Bearer token123"
+            Oczekiwany wynik: SUCCESS 200, data=[].
+
+    TC-H09  Jeden z dwóch wymaganych nagłówków brakuje
+            Wejście: mamy Authorization, brak UserData
+            Oczekiwany wynik: ERROR 403, komunikat o UserData,
+            Authorization nie wymieniony jako brakujący.
+
+    TC-H10  Nagłówek UserData z pustym obiektem JSON {}
+            Oczekiwany wynik: SUCCESS, data[0].data == {}.
+
+
+  2.2 WARSTWA HELPERY — walidatory danych
+  ----------------------------------------
+  Plik: tests/core/helper/test_validators.py
+  Testowane funkcje: is_valid_uuid(), get_env_variable(),
+                     validate_required_fields()
+                     z core/helper/validators.py
+
+  Scenariusze testowe (21 testów):
+
+  is_valid_uuid():
+    TC-V01  Poprawny UUID v4 — zwraca True.
+    TC-V02  Losowy string "not-a-uuid" — zwraca False.
+    TC-V03  Pusty string "" — zwraca False.
+    TC-V04  UUID wielkie litery — zwraca False (format v4 wymaga małych).
+    TC-V05  UUID bez myślników — zwraca False.
+    TC-V06  UUID v1 weryfikowany jako v4 — zwraca False.
+    TC-V07  UUID v1 weryfikowany jako v1 — zwraca True.
+    TC-V08  Liczba "12345" — zwraca False.
+
+  get_env_variable():
+    TC-V09  Istniejąca zmienna środowiskowa — zwraca wartość.
+    TC-V10  Brakująca zmienna — rzuca wyjątek z komunikatem.
+    TC-V11  Wartość z cudzysłowami podwójnymi — stripuje je.
+    TC-V12  Wartość z cudzysłowami pojedynczymi — stripuje je.
+    TC-V13  Wartość bez cudzysłowów — zwraca bez zmian.
+    TC-V14  Pusta wartość zmiennej — rzuca wyjątek.
+
+  validate_required_fields():
+    TC-V15  Wszystkie wymagane pola obecne — (True, "").
+    TC-V16  Brakuje jednego pola — (False, komunikat z nazwą pola).
+    TC-V17  Brakuje kilku pól — (False, wszystkie nazwy w komunikacie).
+    TC-V18  Pusta lista wymaganych pól — (True, "").
+    TC-V19  Pusty słownik danych — (False, komunikat).
+    TC-V20  Dodatkowe pola w danych są ignorowane — (True, "").
+    TC-V21  Komunikat zawiera prefix "Missing field(s):"
+
+
+  2.3 WARSTWA MIDDLEWARE — weryfikacja hasła
+  -------------------------------------------
+  Plik: tests/core/middleware/test_utils.py
+  Testowana funkcja: verification_password() z core/middleware/utils.py
+
+  Scenariusze testowe (6 testów):
+
+    TC-M01  Poprawne hasło względem skrótu bcrypt — zwraca True.
+    TC-M02  Błędne hasło — zwraca False.
+    TC-M03  Puste hasło "" — zwraca False.
+    TC-M04  To samo hasło haszowane dwukrotnie daje różne skróty,
+            ale oba poprawnie weryfikują — test losowości soli bcrypt.
+    TC-M05  Hasło ze znakami specjalnymi "zaq1@WSX!#$" — zwraca True.
+    TC-M06  Hasło różniące się wielkością liter ("password123" vs
+            "Password123") — zwraca False (case-sensitive).
+
+
+  2.4 WARSTWA MIDDLEWARE — autoryzacja JWT
+  -----------------------------------------
+  Plik: tests/core/middleware/test_basic_authorization.py
+  Testowana klasa: JWTBasicAuthenticationMiddleware
+                   z core/middleware/basic_authorization.py
+  Izolacja: get_env_variable mockowany przez patch(),
+            get_db mockowany przez MagicMock().
+
+  Scenariusze testowe (14 testów):
+
+  decode_jwt():
+    TC-J01  Ważny token — zwraca (True, "").
+    TC-J02  Wygasły token — zwraca (False, komunikat o "expired").
+    TC-J03  Niepoprawny string — zwraca (False, "decode error").
+    TC-J04  Token bez pola "id" — zwraca (False, "No such user").
+    TC-J05  Token podpisany złym sekretem — zwraca (False).
+
+  encode_refresh_jwt():
+    TC-J06  Zwraca string o niezerowej długości.
+    TC-J07  Zdekodowany token zawiera przekazane user_id.
+    TC-J08  Zdekodowany token zawiera pole "exp" (czas wygaśnięcia).
+
+  encode_jwt():
+    TC-J09  Nieistniejący użytkownik w DB — (False, "not exist", None).
+    TC-J10  Błędne hasło — (False, "not correct", None).
+    TC-J11  Poprawne dane logowania — (True, "", dane z tokenami).
+            Odpowiedź zawiera: access_token, refresh_token, username.
+
+  decode_refresh_jwt():
+    TC-J12  Pusty token "" — (False, "not provided").
+    TC-J13  Niepoprawny token — (False, None).
+    TC-J14  Użytkownik nie istnieje w DB — (False, "not exist").
+
+
+  2.5 WARSTWA REPOZYTORIUM — operacje na zadaniach
+  --------------------------------------------------
+  Pliki: tests/core/repository/psql/tasks/
+  Izolacja bazy: conftest.py patchuje get_db we wszystkich
+  5 modułach repozytorium — testy używają rzeczywistej bazy
+  testowej z rollbackiem po każdym teście (scope=function).
+
+  Pomocnik: helper.py — make_task() tworzy rekord Tasks,
+            cleanup_task() usuwa go po teście.
+
+  test_create.py (3 testy):
+    TC-R01  create_task_psql() zwraca status=SUCCESS, status_code=200.
+    TC-R02  Zapisane dane (description, time, active, id) są poprawne.
+    TC-R03  Tworzenie zadania z active=False — działa poprawnie.
+
+  test_collection.py (3 testy):
+    TC-R04  collection_tasks_psql() zwraca SUCCESS z listą.
+    TC-R05  Filtrowanie active=True — aktywne w wynikach, nieaktywne nie.
+    TC-R06  Filtrowanie active=False — nieaktywne w wynikach.
+
+  test_update.py (5 testów):
+    TC-R07  update_task_psql() — zmiana description i time.
+    TC-R08  update_task_psql() dla nieistniejącego ID — ERROR 400.
+    TC-R09  update_task_active_psql() — deaktywacja (True -> False).
+    TC-R10  update_task_active_psql() — aktywacja (False -> True).
+    TC-R11  update_task_active_psql() dla nieistniejącego ID — ERROR 400.
+
+  test_delete.py (3 testy):
+    TC-R12  delete_task_psql() — SUCCESS 200, zwraca id usuniętego.
+    TC-R13  delete_task_psql() dla nieistniejącego ID — ERROR 404.
+    TC-R14  Po usunięciu rekord nie istnieje w bazie (query = None).
+
+  test_statistics.py (3 testy):
+    TC-R15  get_task_statistics_psql() zwraca SUCCESS z kluczami:
+            total_tasks, total_time, average_per_week,
+            average_time_per_week, tasks_per_day.
+    TC-R16  Statystyki liczą tylko zadania inactive (active=False).
+            Zadanie active=True nie jest wliczane do total_tasks.
+    TC-R17  tasks_per_day pokrywa wszystkie dni w zakresie dat
+            (brak przerw w serii — test zakresu 2025-01-01 do 01-03).
+
+
+----------------------------------------------------------------
+ 3. TESTY E2E FRONTENDU (Cypress)
+----------------------------------------------------------------
+
+  Technologia: Cypress 14.0.3
+  Konfiguracja: frontend/cypress.config.ts
+  Pliki testów: frontend/__tests__/test/
+
+  Uruchomienie lokalne (frontend musi działać na :5173):
+    npx cypress run       -- tryb headless (CI)
+    npx cypress open      -- tryb interaktywny (przeglądarka)
+
+
+  3.1 TEST PANELU LOGOWANIA
+  --------------------------
+  Plik: frontend/__tests__/test/LoginPanel.cy.ts
+
+    TC-E01  Strona logowania renderuje formularz
+            Kroki:
+              1. cy.visit(paths.login)  ->  otwiera /login
+              2. cy.get("input[placeholder='Nazwa użytkownika']")
+                   .should("exist")
+              3. cy.get("input[placeholder='Hasło']")
+                   .should("exist")
+            Oczekiwany wynik: oba pola formularza widoczne w DOM.
+
+  Uwaga: jest to test weryfikujący poprawne renderowanie UI.
+  Nie testuje komunikacji z API (logowanie z poprawnymi danymi).
+
+
+----------------------------------------------------------------
+ 4. MANUALNE TESTOWANIE API — Swagger UI (/docs)
+----------------------------------------------------------------
+
+  Adres: http://localhost:3000/docs
+  (backend uruchomiony lokalnie lub przez Docker)
+
+  Swagger UI generowany automatycznie przez FastAPI na podstawie
+  typów Pydantic i dekoratorów routerów. Umożliwia testowanie
+  każdego endpointu bezpośrednio z przeglądarki.
+
+
+  4.1 PROCEDURA LOGOWANIA I AUTORYZACJI W SWAGGER
+  -------------------------------------------------
+  Krok 1. Otwórz http://localhost:3000/docs
+  Krok 2. Rozwiń sekcję "Authentication"
+  Krok 3. Wywołaj POST /authentication/login
+          Body: {"username": "<user>", "password": "<pass>"}
+          Oczekiwany wynik: HTTP 200, access_token + refresh_token
+  Krok 4. Kliknij "Authorize" (kłódka, prawy górny róg)
+          Wklej: Bearer <access_token>
+  Krok 5. Wszystkie kolejne endpointy wywołuj już z autoryzacją.
+
+
+  4.2 SCENARIUSZE MANUALNYCH TESTÓW — MODUŁ ZADAŃ
+  -------------------------------------------------
+  MT-T01  POST /tasks/create
+          Body: {"description": "Test zadania", "time": 30, "active": true}
+          Oczekiwany wynik: HTTP 200, data.id (UUID), data.description.
+
+  MT-T02  GET /tasks/collection?active=true
+          Oczekiwany wynik: HTTP 200, lista aktywnych zadań.
+          Weryfikacja: nowo utworzone zadanie z MT-T01 jest na liście.
+
+  MT-T03  PATCH /tasks/update/{task_id}
+          Path param: id z MT-T01
+          Body: {"description": "Zmieniony opis", "time": 60}
+          Oczekiwany wynik: HTTP 200, zaktualizowane dane.
+
+  MT-T04  PATCH /tasks/update/active/{task_id}
+          Body: {"active": false}
+          Oczekiwany wynik: HTTP 200, data.active == false.
+          Weryfikacja: GET /tasks/collection?active=false — zadanie widoczne.
+
+  MT-T05  GET /tasks/statistics?start_date=2025-01-01&end_date=2025-12-31
+          Oczekiwany wynik: HTTP 200, klucze total_tasks, total_time,
+          average_per_week, average_time_per_week, tasks_per_day.
+
+  MT-T06  DELETE /tasks/delete/{task_id}
+          Oczekiwany wynik: HTTP 200, data.id == usuniętego zadania.
+          Weryfikacja: GET collection — zadanie zniknęło z listy.
+
+  MT-T07  Nieistniejące ID — DELETE /tasks/delete/<random-uuid>
+          Oczekiwany wynik: HTTP 404, status=ERROR.
+
+
+  4.3 SCENARIUSZE MANUALNYCH TESTÓW — MODUŁ ROZLICZEŃ
+  -----------------------------------------------------
+  MT-M01  POST /outstanding_money/create_list
+          Body: {"name": "Pożyczki 2025"}
+          Oczekiwany wynik: HTTP 200, data.id, data.name.
+
+  MT-M02  POST /outstanding_money/add_item
+          Body: {"id_name": "<id z MT-M01>", "name": "Obiad",
+                 "amount": 45.50, "date": "2025-05-01"}
+          Oczekiwany wynik: HTTP 200, nowa pozycja z id.
+
+  MT-M03  GET /outstanding_money/collection
+          Oczekiwany wynik: HTTP 200, lista z nową listą i jej pozycjami.
+
+  MT-M04  PUT /outstanding_money/edit_name_list
+          Body: {"id": "<id z MT-M01>", "name": "Pożyczki maj 2025"}
+          Oczekiwany wynik: HTTP 200, zaktualizowana nazwa.
+
+  MT-M05  DELETE /outstanding_money/delete_item/{id}
+          Oczekiwany wynik: HTTP 200, pozycja usunięta.
+
+  MT-M06  DELETE /outstanding_money/delete_list/{id}
+          Oczekiwany wynik: HTTP 200, cała lista usunięta.
+
+
+  4.4 SCENARIUSZE MANUALNYCH TESTÓW — POZOSTAŁE MODUŁY
+  ------------------------------------------------------
+  MT-L01  GET /logs/collection/10
+          Oczekiwany wynik: HTTP 200, lista ostatnich 10 logów.
+
+  MT-L02  POST /logs/create/TestowyLog
+          Oczekiwany wynik: HTTP 200, nowy wpis logu.
+
+  MT-F01  POST /fuel/fuel_calculations
+          Body: parametry kalkulacji paliwa
+          Oczekiwany wynik: HTTP 200, wynik obliczeń.
+
+  MT-A01  Test bez tokenu — dowolny chroniony endpoint
+          Oczekiwany wynik: HTTP 403 lub 401.
+
+  MT-A02  Test z wygasłym/niepoprawnym tokenem
+          Oczekiwany wynik: HTTP 403, komunikat o błędnym tokenie.
+
+
+----------------------------------------------------------------
+ 5. MANUALNE TESTOWANIE FRONTENDU (localhost:5173)
+----------------------------------------------------------------
+
+  Uruchomienie: docker-compose up lub cd frontend && npm run dev
+  Adres: http://localhost:5173
+
+
+  5.1 SCENARIUSZE MANUALNEGO TESTOWANIA UI
+  ------------------------------------------
+  MT-UI01  Logowanie
+           Kroki: wejdź na /login, wpisz dane, kliknij "Zaloguj"
+           Oczekiwany wynik: przekierowanie do /money-settlement.
+
+  MT-UI02  Dostęp bez logowania
+           Kroki: wejdź bezpośrednio na /tasks bez tokenu
+           Oczekiwany wynik: przekierowanie na /login (isAuth guard).
+
+  MT-UI03  Moduł Tasks — pełny CRUD
+           Kroki: dodaj zadanie, sprawdź na liście, edytuj,
+           zmień status, usuń.
+
+  MT-UI04  Moduł MoneySettlement — CRUD list i pozycji
+           Kroki: utwórz listę, dodaj pozycje, edytuj, usuń.
+
+  MT-UI05  Kalkulator paliwa — obliczenie
+           Kroki: wprowadź parametry, kliknij oblicz, sprawdź wynik.
+
+  MT-UI06  Logi — przeglądanie
+           Kroki: wejdź na /logs, sprawdź czy lista się ładuje.
+
+
+----------------------------------------------------------------
+ 6. PODSUMOWANIE POKRYCIA TESTAMI
+----------------------------------------------------------------
+
+  Warstwa                 | Metoda            | Liczba testów
+  ------------------------|-------------------|---------------
+  Helpery (headers)       | pytest jednostk.  | 10
+  Helpery (validators)    | pytest jednostk.  | 21
+  Middleware (utils)      | pytest jednostk.  |  6
+  Middleware (JWT auth)   | pytest jednostk.  | 14
+  Repo: create            | pytest jednostk.  |  3
+  Repo: collection        | pytest jednostk.  |  3
+  Repo: update            | pytest jednostk.  |  5
+  Repo: delete            | pytest jednostk.  |  3
+  Repo: statistics        | pytest jednostk.  |  3
+  Frontend LoginPanel     | Cypress E2E       |  1
+  API endpointy           | Swagger manualnie | ~15 scenariuszy
+  UI przepływy            | manualne          |  6 scenariuszy
+  ------------------------|-------------------|---------------
+  RAZEM automatyczne      |                   | ~68 testów PASS
+  RAZEM manualne          |                   | ~21 scenariuszy
+
+
+================================================================
