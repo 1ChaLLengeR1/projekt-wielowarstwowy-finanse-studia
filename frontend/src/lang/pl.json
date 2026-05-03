@@ -1,0 +1,92 @@
+{
+  "pages": {
+    "login": {
+      "header": "Zaloguj się do konta",
+      "input": {
+        "username": "Nazwa użytkownika",
+        "password": "Hasło"
+      },
+      "button": {
+        "login": "Zaloguj się"
+      }
+    },
+    "logs": {
+      "header": "Logi"
+    },
+    "fuelCalculator": {
+      "header": "Kalkulator Paliw",
+      "description": "Koszt Przejechania Trasy",
+      "placeholder": {
+        "fuel": "Cena paliwa",
+        "way": "Długość trasy",
+        "combustion": "Średnia spalania",
+        "remaining_values": "Dodatkowy koszt"
+      }
+    },
+    "moneySettlement": {
+      "header": "Lista Zaległych",
+      "description": {
+        "create": "Stwórz Liste zalełgych"
+      },
+      "placeholder": {
+        "name_list": "Nazwa Listy",
+        "name": "Nazwa produktu",
+        "amount": "Cena produktu"
+      },
+      "button": {
+        "addList": "Dodaj produkt do listy",
+        "sendList": "Wyślij Liste",
+        "addItem": "Dodaj do listy"
+      }
+    },
+    "tasks": {
+      "header": "Zadania",
+      "description": {
+        "create": "Stwórz List Zadań"
+      },
+      "placeholder": {
+        "description": "Opis zadania",
+        "time": "Podaj czas w minutach",
+        "active": "Aktywne zadanie?"
+      },
+      "button": {
+        "addTask": "Dodaj zadanie",
+        "deactive": "Dezaktywuj",
+        "active": "Aktywuj",
+        "showActive": "Pokaż liste aktywnych zadań",
+        "showNotActive": "Pokaż liste nieaktywnych zadań"
+      },
+      "table": {
+        "quantity": "Zadania, Liczba: {quantity}",
+        "description": "Opis",
+        "time": "Czas wykonania w minutach",
+        "timeValue": "{time} minut",
+        "options": "Opcje",
+        "status": "Status zadania",
+        "datetime": "Data zadania",
+        "createdAt": "Utworzono: {created_at}",
+        "updatedAt": "Zaktualizowano: {updated_at}"
+      }
+    }
+  },
+  "loadingSpinner": {
+    "description": "Ładowanie..."
+  },
+  "navSlider": {
+    "links": {
+      "artek": {
+        "moneySettlement": "Rozliczenia pieniędzy",
+        "fuelCalculator": "Kalkulator Paliw",
+        "tasks": "Zadania",
+        "log": "Logi"
+      }
+    },
+    "button": {
+      "logOut": "Wyloguj sie"
+    }
+  },
+  "notification": {
+    "success": "Sukces",
+    "error": "Błąd"
+  }
+}
